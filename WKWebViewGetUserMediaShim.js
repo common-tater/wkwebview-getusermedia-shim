@@ -23,7 +23,7 @@
   }
 
   function getUserMedia (constraints, successCallback, errorCallback) {
-    postMessage('GetUserMediaShim_MediaStream_new', constraints, function (trackData) {
+    postMessage('WKWebViewGetUserMediaShim_MediaStream_new', constraints, function (trackData) {
       var stream = new MediaStream()
 
       for (var i in trackData) {
@@ -143,7 +143,7 @@
 
     this.readyState = 'ended'
 
-    window.webkit.messageHandlers['GetUserMediaShim_MediaStreamTrack_stop'].postMessage({
+    window.webkit.messageHandlers['WKWebViewGetUserMediaShim_MediaStreamTrack_stop'].postMessage({
       id: this.id
     })
 

@@ -1,16 +1,16 @@
 //
-//  GetUserMedia.m
+//  WKWebViewGetUserMediaShim.m
 //  CommonTater
 //
 //  Created by Jesse Tane on 5/4/15.
 //  Copyright (c) 2015 Common Tater. All rights reserved.
 //
 
-#import "GetUserMediaShim.h"
+#import "WKWebViewGetUserMediaShim.h"
 
-//#define GET_USER_MEDIA_SHIM_DEBUG 1
-#define GET_USER_MEDIA_SHIM_MIN_FRAMES 4096
-#define GET_USER_MEDIA_SHIM_BYTES_PER_FRAME 4
+//#define WKWEBVIEW_GET_USER_MEDIA_SHIM_DEBUG 1
+#define WKWEBVIEW_GET_USER_MEDIA_SHIM_BYTES_PER_FRAME 4
+#define WKWEBVIEW_GET_USER_MEDIA_SHIM_MIN_BYTES (WKWEBVIEW_GET_USER_MEDIA_SHIM_BYTES_PER_FRAME * 4096)
 
 static OSStatus recordingCallback(void *inRefCon,
                                   AudioUnitRenderActionFlags *ioActionFlags,
@@ -18,11 +18,9 @@ static OSStatus recordingCallback(void *inRefCon,
                                   UInt32 inBusNumber,
                                   UInt32 inNumberFrames,
                                   AudioBufferList *ioData) {
-  GetUserMedia *target = (__bridge GetUserMedia*)inRefCon;
-  OSStatus status;
+  WKWebViewGetUserMediaShim *target = (__bridge WKWebViewGetUserMediaShim*)inRefCon;
   AudioBufferList bufferList = target.audioBufferList;
-
-  status = AudioUnitRender(target.audioUnit,
+  OSStatus status = AudioUnitRender(target.audioUnit,
                            ioActionFlags,
                            inTimeStamp,
                            inBusNumber,
@@ -33,35 +31,42 @@ static OSStatus recordingCallback(void *inRefCon,
     [NSException raise:@"Error" format:@"#%d: failed to render audio data to buffer", (int)status];
   }
 
-#ifdef GET_USER_MEDIA_SHIM_DEBUG
+#ifdef WKWEBVIEW_GET_USER_MEDIA_SHIM_DEBUG
   NSLog(@"recording callback was called with %d frames", (unsigned int)inNumberFrames);
 #endif
 
-  NSUInteger inNumberBytes = inNumberFrames * GET_USER_MEDIA_SHIM_BYTES_PER_FRAME;
+  NSUInteger inNumberBytes = inNumberFrames * WKWEBVIEW_GET_USER_MEDIA_SHIM_BYTES_PER_FRAME;
   [target.audioData appendBytes:target.audioBuffer.mData length:inNumberBytes];
 
-  if (target.audioData.length >= GET_USER_MEDIA_SHIM_MIN_FRAMES * GET_USER_MEDIA_SHIM_BYTES_PER_FRAME) {
+  if (target.audioData.length >= WKWEBVIEW_GET_USER_MEDIA_SHIM_MIN_BYTES) {
     @autoreleasepool { [target onaudio]; }
     [target.audioData setLength:0];
   }
-
+  
   return noErr;
 }
 
 
-@implementation GetUserMediaShim
+@implementation WKWebViewGetUserMediaShim
 
-@synthesize webView, audioUnit, audioBuffer, audioBufferList, audioData, videoBuffer;
+@synthesize webView,
+            audioUnit,
+            audioBuffer,
+            audioBufferList,
+            audioData,
+            videoBuffer;
 
-- (id) initWithWebView:(WKWebView*)view contentController:(WKUserContentController *)controller {
+- (id) initWithWebView:(WKWebView*)view
+     contentController:(WKUserContentController *)controller {
 
   if (self = [super init]) {
     webView = view;
     tracks = [[NSMutableDictionary alloc] init];
-    
+
     audioStarted = NO;
-    audioBuffer.mDataByteSize = GET_USER_MEDIA_SHIM_MIN_FRAMES * GET_USER_MEDIA_SHIM_BYTES_PER_FRAME;
-    audioBuffer.mData = malloc(GET_USER_MEDIA_SHIM_MIN_FRAMES * GET_USER_MEDIA_SHIM_BYTES_PER_FRAME);
+
+    audioBuffer.mDataByteSize = WKWEBVIEW_GET_USER_MEDIA_SHIM_MIN_BYTES;
+    audioBuffer.mData = malloc(WKWEBVIEW_GET_USER_MEDIA_SHIM_MIN_BYTES);
     audioBuffer.mNumberChannels = 1;
     audioBufferList.mNumberBuffers = 1;
     audioBufferList.mBuffers[0] = audioBuffer;
@@ -70,20 +75,20 @@ static OSStatus recordingCallback(void *inRefCon,
     videoStarted = NO;
 
     methods = @[
-      @"GetUserMediaShim_MediaStream_new",
-      @"GetUserMediaShim_MediaStreamTrack_stop",
+      @"WKWebViewGetUserMediaShim_MediaStream_new",
+      @"WKWebViewGetUserMediaShim_MediaStreamTrack_stop",
     ];
 
     for (NSString *method in methods) {
       [controller addScriptMessageHandler:self name:method];
     }
 
-    NSString * path = [[NSBundle mainBundle].resourcePath stringByAppendingString:@"/GetUserMediaShim.js"];
+    NSString * path = [[NSBundle mainBundle].resourcePath stringByAppendingString:@"/WKWebViewGetUserMediaShim.js"];
     NSString * bindingJs = [NSString stringWithContentsOfFile:path encoding:NSUTF8StringEncoding error:nil];
     WKUserScript * script = [[WKUserScript alloc] initWithSource:bindingJs injectionTime:WKUserScriptInjectionTimeAtDocumentStart forMainFrameOnly:YES];
     [controller addUserScript:script];
 
-#ifdef GET_USER_MEDIA_SHIM_DEBUG
+#ifdef WKWEBVIEW_GET_USER_MEDIA_SHIM_DEBUG
   NSLog(@"did create getUserMedia shim");
 #endif
   }
@@ -100,7 +105,7 @@ static OSStatus recordingCallback(void *inRefCon,
 
   for (NSString *method in methods) {
     if ([message.name isEqualToString:method]) {
-      name = [[method componentsSeparatedByString:@"GetUserMedia_"] objectAtIndex:1];
+      name = [[method componentsSeparatedByString:@"WKWebViewGetUserMediaShim_"] objectAtIndex:1];
       name = [name stringByAppendingString:@":"];
       break;
     }
@@ -108,7 +113,7 @@ static OSStatus recordingCallback(void *inRefCon,
 
   if (name == nil) {
 
-#ifdef GET_USER_MEDIA_SHIM_DEBUG
+#ifdef WKWEBVIEW_GET_USER_MEDIA_SHIM_DEBUG
   NSLog(@"unrecognized method");
 #endif
 
@@ -130,7 +135,7 @@ static OSStatus recordingCallback(void *inRefCon,
 
 - (void) MediaStream_new:(NSDictionary*)params {
 
-#ifdef GET_USER_MEDIA_SHIM_DEBUG
+#ifdef WKWEBVIEW_GET_USER_MEDIA_SHIM_DEBUG
   NSLog(@"MediaStream_new: %@", params);
 #endif
 
@@ -184,7 +189,7 @@ static OSStatus recordingCallback(void *inRefCon,
 
 - (void) MediaStreamTrack_stop:(NSDictionary*)params {
 
-#ifdef GET_USER_MEDIA_SHIM_DEBUG
+#ifdef WKWEBVIEW_GET_USER_MEDIA_SHIM_DEBUG
   NSLog(@"MediaStreamTrack_stop: %@", params);
 #endif
 
@@ -300,7 +305,7 @@ static OSStatus recordingCallback(void *inRefCon,
 
   audioStarted = YES;
 
-#ifdef GET_USER_MEDIA_SHIM_DEBUG
+#ifdef WKWEBVIEW_GET_USER_MEDIA_SHIM_DEBUG
   NSLog(@"did start capturing audio");
 #endif
 
@@ -326,7 +331,7 @@ static OSStatus recordingCallback(void *inRefCon,
   audioUnit = nil;
   audioStarted = NO;
 
-#ifdef GET_USER_MEDIA_SHIM_DEBUG
+#ifdef WKWEBVIEW_GET_USER_MEDIA_SHIM_DEBUG
   NSLog(@"did stop capturing audio");
 #endif
 }
@@ -346,7 +351,7 @@ static OSStatus recordingCallback(void *inRefCon,
 
 - (void) onaudio {
 
-#ifdef GET_USER_MEDIA_SHIM_DEBUG
+#ifdef WKWEBVIEW_GET_USER_MEDIA_SHIM_DEBUG
   NSLog(@"onaudio %lu", (unsigned long) audioData.length);
 #endif
 

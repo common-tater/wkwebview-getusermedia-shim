@@ -1,19 +1,19 @@
 //
-//  GetUserMedia.h
+//  WKWebViewGetUserMediaShim.h
 //  CommonTater
 //
 //  Created by Jesse Tane on 5/4/15.
 //  Copyright (c) 2015 Common Tater. All rights reserved.
 //
 
-#ifndef CommonTater_GetUserMedia_h
-#define CommonTater_GetUserMedia_h
+#ifndef WKWebViewGetUserMediaShim_h
+#define WKWebViewGetUserMediaShim_h
 
 #import <Foundation/Foundation.h>
 #import <WebKit/WebKit.h>
 #import <AudioToolbox/AudioToolbox.h>
 
-@interface GetUserMedia : NSObject <WKScriptMessageHandler> {
+@interface WKWebViewGetUserMediaShim : NSObject <WKScriptMessageHandler> {
   NSArray *methods;
   NSMutableDictionary *tracks;
   BOOL audioStarted;
