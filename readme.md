@@ -1,4 +1,4 @@
-# wkwebview-get-user-media-shim
+# wkwebview-getusermedia-shim
 `getUserMedia` shim for iOS.
 
 ## Note
