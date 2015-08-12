@@ -1,8 +1,8 @@
 {
-  "name": "wkwebview-get-user-media-shim",
+  "name": "wkwebview-getusermedia-shim",
   "version": "0.0.2",
   "description": "getUserMedia shim for iOS",
-  "repository": "git+https://github.com/common-tater/wkwebview-get-user-media-shim.git",
+  "repository": "git+https://github.com/common-tater/wkwebview-getusermedia-shim.git",
   "keywords": [
     "getUserMedia",
     "iOS",
