@@ -180,6 +180,12 @@ static OSStatus recordingCallback(void *inRefCon,
       [webView evaluateJavaScript:js completionHandler:nil];
       return;
     }
+
+    // handle audio session interruptions such as incoming phone calls
+    [[NSNotificationCenter defaultCenter] addObserver:self
+                                             selector:@selector(handleAudioSessionInterruption:)
+                                                 name:AVAudioSessionInterruptionNotification
+                                               object:nil];
   }
 
   json = [[NSString alloc] initWithData:[NSJSONSerialization dataWithJSONObject:streamTracks options:0 error:nil] encoding:NSUTF8StringEncoding];
@@ -214,10 +220,26 @@ static OSStatus recordingCallback(void *inRefCon,
 
   if (audioTrackCount == 0 && audioStarted) {
     [self stopAudio];
+    [[NSNotificationCenter defaultCenter] removeObserver:self
+                                                    name:AVAudioSessionInterruptionNotification
+                                                  object:nil];
   }
-  
+
   if (videoTrackCount == 0 && videoStarted) {
     [self stopVideo];
+  }
+}
+
+
+#pragma mark audio session interruption handling
+
+- (void) handleAudioSessionInterruption:(NSNotification*)notification {
+  NSNumber *interruptionType = [[notification userInfo] objectForKey:AVAudioSessionInterruptionTypeKey];
+
+  if (interruptionType.unsignedIntegerValue == AVAudioSessionInterruptionTypeBegan) {
+    [self stopAudio];
+  } else {
+    [self startAudio];
   }
 }
 

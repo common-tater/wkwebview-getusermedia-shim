@@ -12,6 +12,7 @@
 #import <Foundation/Foundation.h>
 #import <WebKit/WebKit.h>
 #import <AudioToolbox/AudioToolbox.h>
+#import <AVFoundation/AVFoundation.h>
 
 @interface WKWebViewGetUserMediaShim : NSObject <WKScriptMessageHandler> {
   NSArray *methods;
